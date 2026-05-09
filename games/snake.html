@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>贪吃蛇</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a2332;
+      --text: #e7ecf3;
+      --muted: #8b9cb3;
+      --snake: #3ddc84;
+      --snake-head: #6ef0a8;
+      --food: #ff6b6b;
+      --grid: #243044;
+      --accent: #5b8def;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+      background: radial-gradient(ellipse 120% 80% at 50% -20%, #1e3a5f 0%, var(--bg) 55%);
+      color: var(--text);
+      user-select: none;
+    }
+    h1 {
+      font-weight: 600;
+      font-size: 1.5rem;
+      letter-spacing: 0.06em;
+      margin: 0 0 1rem;
+      color: var(--muted);
+    }
+    .wrap {
+      background: var(--panel);
+      border-radius: 16px;
+      padding: 1.25rem 1.5rem 1.5rem;
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.04);
+    }
+    .bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 0.75rem;
+      font-size: 0.9rem;
+    }
+    .score {
+      font-variant-numeric: tabular-nums;
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .hint {
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+    canvas {
+      display: block;
+      border-radius: 8px;
+      background: var(--bg);
+      box-shadow: inset 0 0 0 1px var(--grid);
+    }
+    /* 必须盖住 .overlay 的 display:flex，否则多个遮罩会叠在一起半透明显示 */
+    .overlay[hidden] {
+      display: none !important;
+    }
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(15, 20, 25, 0.82);
+      border-radius: 8px;
+      text-align: center;
+      padding: 1rem;
+    }
+    .overlay h2 {
+      margin: 0 0 0.5rem;
+      font-size: 1.25rem;
+    }
+    .overlay p {
+      margin: 0 0 1rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+      max-width: 240px;
+      line-height: 1.5;
+    }
+    button {
+      cursor: pointer;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 0.65rem 1.4rem;
+      border-radius: 10px;
+      transition: transform 0.12s ease, filter 0.12s ease;
+    }
+    button:hover {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+    }
+    button:active {
+      transform: translateY(0);
+    }
+    .canvas-box {
+      position: relative;
+      line-height: 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>贪吃蛇</h1>
+  <div class="wrap">
+    <div class="bar">
+      <span>得分 <span class="score" id="score">0</span></span>
+      <span class="hint" id="status">方向键 / WASD · 空格暂停</span>
+    </div>
+    <div class="canvas-box">
+      <canvas id="game" width="400" height="400" aria-label="贪吃蛇游戏画布"></canvas>
+      <div class="overlay" id="startOverlay">
+        <h2>准备开始</h2>
+        <p>吃掉红色食物变长，不要撞墙或咬到自己。</p>
+        <button type="button" id="startBtn">开始游戏</button>
+      </div>
+      <div class="overlay" id="gameOverOverlay" hidden>
+        <h2>游戏结束</h2>
+        <p>最终得分 <strong id="finalScore">0</strong></p>
+        <button type="button" id="restartBtn">再来一局</button>
+      </div>
+      <div class="overlay" id="pauseOverlay" hidden>
+        <h2>已暂停</h2>
+        <p>按空格继续</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const COLS = 20;
+      const ROWS = 20;
+      const CELL = 20;
+      const canvas = document.getElementById("game");
+      const ctx = canvas.getContext("2d");
+      const scoreEl = document.getElementById("score");
+      const statusEl = document.getElementById("status");
+      const startOverlay = document.getElementById("startOverlay");
+      const gameOverOverlay = document.getElementById("gameOverOverlay");
+      const pauseOverlay = document.getElementById("pauseOverlay");
+      const finalScoreEl = document.getElementById("finalScore");
+      const startBtn = document.getElementById("startBtn");
+      const restartBtn = document.getElementById("restartBtn");
+
+      const DIR = { UP: [0, -1], DOWN: [0, 1], LEFT: [-1, 0], RIGHT: [1, 0] };
+      let snake, dir, nextDir, food, score, tickMs, running, paused, rafId, lastTick;
+
+      function randInt(n) {
+        return Math.floor(Math.random() * n);
+      }
+
+      function emptyCell() {
+        const occupied = new Set(snake.map((p) => p[0] + "," + p[1]));
+        const candidates = [];
+        for (let y = 0; y < ROWS; y++) {
+          for (let x = 0; x < COLS; x++) {
+            if (!occupied.has(x + "," + y)) candidates.push([x, y]);
+          }
+        }
+        if (candidates.length === 0) return null;
+        return candidates[randInt(candidates.length)];
+      }
+
+      function resetGame() {
+        const mid = Math.floor(COLS / 2);
+        snake = [
+          [mid, mid],
+          [mid - 1, mid],
+          [mid - 2, mid],
+        ];
+        dir = DIR.RIGHT;
+        nextDir = DIR.RIGHT;
+        food = emptyCell();
+        score = 0;
+        tickMs = 140;
+        scoreEl.textContent = "0";
+        running = true;
+        paused = false;
+        lastTick = 0;
+        pauseOverlay.hidden = true;
+        gameOverOverlay.hidden = true;
+        startOverlay.hidden = true;
+        statusEl.textContent = "游戏中";
+      }
+
+      function drawCell(x, y, color) {
+        const pad = 1;
+        ctx.fillStyle = color;
+        ctx.fillRect(x * CELL + pad, y * CELL + pad, CELL - pad * 2, CELL - pad * 2);
+      }
+
+      function draw() {
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() || "#0f1419";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        const grid = getComputedStyle(document.documentElement).getPropertyValue("--grid").trim() || "#243044";
+        ctx.strokeStyle = grid;
+        ctx.lineWidth = 0.5;
+        for (let i = 0; i <= COLS; i++) {
+          ctx.beginPath();
+          ctx.moveTo(i * CELL, 0);
+          ctx.lineTo(i * CELL, ROWS * CELL);
+          ctx.stroke();
+        }
+        for (let j = 0; j <= ROWS; j++) {
+          ctx.beginPath();
+          ctx.moveTo(0, j * CELL);
+          ctx.lineTo(COLS * CELL, j * CELL);
+          ctx.stroke();
+        }
+        const snakeColor = getComputedStyle(document.documentElement).getPropertyValue("--snake").trim();
+        const headColor = getComputedStyle(document.documentElement).getPropertyValue("--snake-head").trim();
+        const foodColor = getComputedStyle(document.documentElement).getPropertyValue("--food").trim();
+        snake.forEach((seg, i) => {
+          drawCell(seg[0], seg[1], i === 0 ? headColor : snakeColor);
+        });
+        if (food) drawCell(food[0], food[1], foodColor);
+      }
+
+      function step() {
+        dir = nextDir;
+        const head = snake[0];
+        const nx = head[0] + dir[0];
+        const ny = head[1] + dir[1];
+        if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) {
+          endGame();
+          return;
+        }
+        const hitSelf = snake.some((s) => s[0] === nx && s[1] === ny);
+        if (hitSelf) {
+          endGame();
+          return;
+        }
+        snake.unshift([nx, ny]);
+        if (food && nx === food[0] && ny === food[1]) {
+          score += 10;
+          scoreEl.textContent = String(score);
+          food = emptyCell();
+          if (!food) {
+            score += 500;
+            scoreEl.textContent = String(score);
+            statusEl.textContent = "地图吃满，胜利！";
+            endGame();
+            return;
+          }
+          tickMs = Math.max(70, tickMs - 4);
+        } else {
+          snake.pop();
+        }
+      }
+
+      function endGame() {
+        running = false;
+        paused = false;
+        pauseOverlay.hidden = true;
+        startOverlay.hidden = true;
+        finalScoreEl.textContent = String(score);
+        gameOverOverlay.hidden = false;
+        statusEl.textContent = "游戏结束";
+      }
+
+      function loop(ts) {
+        if (!running) {
+          draw();
+          return;
+        }
+        if (paused) {
+          draw();
+          rafId = requestAnimationFrame(loop);
+          return;
+        }
+        if (!lastTick) lastTick = ts;
+        if (ts - lastTick >= tickMs) {
+          lastTick = ts;
+          step();
+        }
+        draw();
+        rafId = requestAnimationFrame(loop);
+      }
+
+      function startLoop() {
+        if (rafId) cancelAnimationFrame(rafId);
+        lastTick = 0;
+        rafId = requestAnimationFrame(loop);
+      }
+
+      function queueDir(dx, dy) {
+        const nd = [dx, dy];
+        if (dir[0] + nd[0] === 0 && dir[1] + nd[1] === 0) return;
+        nextDir = nd;
+      }
+
+      document.addEventListener("keydown", (e) => {
+        if (e.code === "Space") {
+          e.preventDefault();
+          if (!running && !startOverlay.hidden) return;
+          if (!running && !gameOverOverlay.hidden) return;
+          if (!running) return;
+          paused = !paused;
+          pauseOverlay.hidden = !paused;
+          statusEl.textContent = paused ? "已暂停" : "游戏中";
+          return;
+        }
+        const key = e.key.toLowerCase();
+        if (key === "arrowup" || key === "w") queueDir(0, -1);
+        else if (key === "arrowdown" || key === "s") queueDir(0, 1);
+        else if (key === "arrowleft" || key === "a") queueDir(-1, 0);
+        else if (key === "arrowright" || key === "d") queueDir(1, 0);
+      });
+
+      startBtn.addEventListener("click", () => {
+        resetGame();
+        startLoop();
+      });
+
+      restartBtn.addEventListener("click", () => {
+        resetGame();
+        startLoop();
+      });
+
+      (function seedPreviewBoard() {
+        const mid = Math.floor(COLS / 2);
+        snake = [
+          [mid, mid],
+          [mid - 1, mid],
+          [mid - 2, mid],
+        ];
+        dir = DIR.RIGHT;
+        nextDir = DIR.RIGHT;
+        food = [mid + 4, mid];
+      })();
+
+      draw();
+    })();
+  </script>
+</body>
+</html>
