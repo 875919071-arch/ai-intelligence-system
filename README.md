@@ -25,3 +25,9 @@ uvicorn ai_intelligence.app:app --reload --app-dir src
 - `src/ai_intelligence/tools/` — 工具注册与执行
 - `src/ai_intelligence/providers/` — LLM 调用
 - `src/ai_intelligence/app.py` — FastAPI 应用
+
+## 贪吃蛇（静态页）
+
+- 本地打开：`games/snake.html`（用浏览器打开即可）。
+- 推到 GitHub 后，若开启 **GitHub Pages**（分支 `main`，文件夹 `/ (root)`），试玩地址为：  
+  `https://<你的用户名>.github.io/<仓库名>/games/snake.html`
