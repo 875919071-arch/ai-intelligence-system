@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>一日三餐选择助手</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        color: #4c3527;
+        background: #fff6e8;
+        --cream: #fff8ec;
+        --cream-deep: #ffe9c7;
+        --cream-soft: #fffdf7;
+        --caramel: #c77b35;
+        --cocoa: #5a3b2d;
+        --peach: #ffb5a7;
+        --rose: #ff7f9f;
+        --mint: #b6dfc2;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at 18% 8%, rgba(255, 196, 167, 0.5), transparent 34%),
+          radial-gradient(circle at 92% 4%, rgba(255, 232, 185, 0.85), transparent 34%),
+          linear-gradient(180deg, #fff7e9 0%, #fff1dc 48%, #fff8ef 100%);
+      }
+
+      main {
+        width: min(430px, calc(100% - 24px));
+        margin: 0 auto;
+        padding: 18px 0 40px;
+      }
+
+      .hero {
+        display: grid;
+        gap: 16px;
+      }
+
+      .panel,
+      .meal-card {
+        border: 1px solid rgba(199, 123, 53, 0.16);
+        border-radius: 30px;
+        background: rgba(255, 253, 247, 0.9);
+        box-shadow: 0 18px 42px rgba(110, 68, 36, 0.11);
+        backdrop-filter: blur(12px);
+      }
+
+      .intro {
+        position: relative;
+        overflow: hidden;
+        min-height: 360px;
+        padding: 24px;
+        background:
+          linear-gradient(145deg, rgba(255, 253, 247, 0.92), rgba(255, 231, 198, 0.9)),
+          var(--cream);
+      }
+
+      .intro p {
+        margin: 0;
+        color: #7b5b45;
+        font-size: 15px;
+        line-height: 1.75;
+      }
+
+      h1 {
+        max-width: 290px;
+        margin: 0 0 12px;
+        color: var(--cocoa);
+        font-size: clamp(38px, 12vw, 54px);
+        line-height: 1.02;
+        letter-spacing: -0.055em;
+      }
+
+      h2,
+      h3 {
+        margin: 0;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 14px;
+        border-radius: 999px;
+        padding: 7px 12px;
+        color: #9b5b2a;
+        background: rgba(255, 255, 255, 0.62);
+        font-size: 12px;
+        font-weight: 900;
+        letter-spacing: 0.04em;
+      }
+
+      .pig-cover {
+        display: grid;
+        place-items: center;
+        margin-top: 22px;
+      }
+
+      .pig-card {
+        position: relative;
+        width: min(290px, 88%);
+        aspect-ratio: 1 / 0.78;
+        border-radius: 36px;
+        background:
+          radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.72), transparent 26%),
+          linear-gradient(145deg, #fffaf0, #ffd9c8);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 20px 44px rgba(167, 91, 63, 0.16);
+      }
+
+      .pig-card::before,
+      .pig-card::after {
+        position: absolute;
+        content: "";
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.5);
+      }
+
+      .pig-card::before {
+        width: 74px;
+        height: 24px;
+        right: 26px;
+        top: 26px;
+        transform: rotate(-9deg);
+      }
+
+      .pig-card::after {
+        width: 42px;
+        height: 16px;
+        left: 30px;
+        bottom: 30px;
+      }
+
+      .pig-illustration {
+        position: absolute;
+        inset: 10px;
+        width: calc(100% - 20px);
+        height: calc(100% - 20px);
+        border-radius: 30px;
+        object-fit: cover;
+        object-position: center;
+        filter: drop-shadow(0 12px 12px rgba(134, 75, 51, 0.16));
+      }
+
+      form {
+        padding: 20px;
+      }
+
+      label {
+        display: grid;
+        gap: 8px;
+        margin-bottom: 14px;
+        color: var(--cocoa);
+        font-size: 14px;
+        font-weight: 900;
+      }
+
+      input,
+      select {
+        width: 100%;
+        border: 1px solid rgba(199, 123, 53, 0.18);
+        border-radius: 18px;
+        padding: 14px 15px;
+        color: var(--cocoa);
+        background: #fffaf1;
+        font: inherit;
+        font-size: 16px;
+        outline: none;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+      }
+
+      input:focus,
+      select:focus {
+        border-color: rgba(255, 127, 159, 0.7);
+        box-shadow: 0 0 0 4px rgba(255, 127, 159, 0.14);
+      }
+
+      .checkbox {
+        display: flex;
+        grid-template-columns: none;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .checkbox input {
+        width: auto;
+      }
+
+      button {
+        border: 0;
+        border-radius: 999px;
+        padding: 15px 20px;
+        color: #fff;
+        background: linear-gradient(135deg, #ff8da8, #e99548);
+        font: inherit;
+        font-size: 16px;
+        font-weight: 800;
+        cursor: pointer;
+        box-shadow: 0 12px 24px rgba(221, 119, 82, 0.22);
+      }
+
+      button.secondary {
+        width: 100%;
+        padding: 12px 14px;
+        color: #b55d36;
+        background: #fff1df;
+        box-shadow: none;
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: 0.7;
+      }
+
+      .actions {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-top: 4px;
+      }
+
+      .actions button {
+        width: 100%;
+      }
+
+      .hint {
+        margin: 12px 0 0;
+        color: #93715b;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .results {
+        display: grid;
+        gap: 14px;
+        margin-top: 16px;
+      }
+
+      .meal-card {
+        display: grid;
+        gap: 14px;
+        padding: 20px;
+      }
+
+      .slot {
+        display: inline-flex;
+        width: fit-content;
+        border-radius: 999px;
+        padding: 6px 10px;
+        color: #a9572c;
+        background: #fff0dc;
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .meal-card h3 {
+        color: var(--cocoa);
+        font-size: 25px;
+        letter-spacing: -0.03em;
+      }
+
+      .reason {
+        margin: 0;
+        color: #7b5b45;
+        font-size: 14px;
+        line-height: 1.65;
+      }
+
+      .tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .tag {
+        border-radius: 999px;
+        padding: 6px 10px;
+        color: #74513b;
+        background: #fff3e3;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .empty,
+      .error {
+        margin-top: 24px;
+        border-radius: 22px;
+        padding: 18px;
+      }
+
+      .empty {
+        color: #8c6a53;
+        background: rgba(255, 253, 247, 0.72);
+      }
+
+      .error {
+        display: none;
+        color: #9a3412;
+        background: #ffead8;
+      }
+
+      @media (min-width: 860px) {
+        main {
+          width: min(960px, calc(100% - 48px));
+          padding-top: 36px;
+        }
+
+        .hero {
+          grid-template-columns: minmax(0, 1fr) 360px;
+          align-items: stretch;
+        }
+
+        .results {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .intro {
+          min-height: auto;
+          padding: 34px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <div class="panel intro">
+          <div class="eyebrow">CREAMY MEAL PICKER</div>
+          <h1>小猪帮你选今天吃什么。</h1>
+          <p>
+            手机上轻轻一点，就给你一组早餐、午餐、晚餐。奶油风小助手先帮你做决定，
+            不喜欢哪一餐再单独换掉。
+          </p>
+          <div class="pig-cover" aria-hidden="true">
+            <div class="pig-card">
+              <img class="pig-illustration" src="./pig-cover.png" alt="可爱的动漫小猪猪" />
+            </div>
+          </div>
+        </div>
+
+        <form class="panel" id="preferences-form">
+          <label>
+            偏好菜系
+            <input
+              id="preferred-cuisines"
+              placeholder="例如：家常, 川湘, 粤式"
+              value="家常, 川湘"
+            />
+          </label>
+
+          <label>
+            喜欢的口味
+            <input id="flavor-preferences" placeholder="例如：下饭, 热乎, 清淡, 微辣" value="下饭, 热乎" />
+          </label>
+
+          <label>
+            忌口/不想吃
+            <input id="avoid-ingredients" placeholder="例如：海鲜, 牛肉, 香菜, 豆制品" />
+          </label>
+
+          <label>
+            健康目标
+            <select id="health-goal">
+              <option value="balanced">均衡</option>
+              <option value="light">轻负担</option>
+              <option value="high_protein">高蛋白</option>
+              <option value="comfort">吃得舒服</option>
+            </select>
+          </label>
+
+          <label>
+            预算
+            <select id="budget">
+              <option value="low">低预算</option>
+              <option value="medium" selected>中等预算</option>
+              <option value="high">预算宽松</option>
+            </select>
+          </label>
+
+          <label>
+            用餐方式
+            <select id="dining-mode">
+              <option value="any">都可以</option>
+              <option value="cook">自己做</option>
+              <option value="eat_out">外食/外卖</option>
+            </select>
+          </label>
+
+          <label class="checkbox">
+            <input id="prefer-quick" type="checkbox" checked />
+            优先省事
+          </label>
+
+          <div class="actions">
+            <button id="recommend-button" type="submit">生成今日三餐</button>
+          </div>
+          <p class="hint">多个偏好用逗号分隔。推荐仅用于选择辅助，不替代专业营养建议。</p>
+        </form>
+      </section>
+
+      <div class="error" id="error"></div>
+      <section class="results" id="results">
+        <div class="empty">还没有生成推荐。填好偏好后，点击“生成今日三餐”。</div>
+      </section>
+    </main>
+
+    <script>
+      const slotLabels = {
+        breakfast: "早餐",
+        lunch: "午餐",
+        dinner: "晚餐",
+      };
+      const budgetLabels = {
+        low: "省钱小碗",
+        medium: "日常预算",
+        high: "今天加餐",
+      };
+      const healthLabels = {
+        balanced: "均衡",
+        light: "轻一点",
+        high_protein: "高蛋白",
+        comfort: "舒服饭",
+      };
+      const state = {
+        seed: Date.now(),
+        recommendations: {},
+      };
+
+      const form = document.querySelector("#preferences-form");
+      const results = document.querySelector("#results");
+      const errorBox = document.querySelector("#error");
+      const recommendButton = document.querySelector("#recommend-button");
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        state.seed = Date.now();
+        await recommendDay();
+      });
+
+      results.addEventListener("click", async (event) => {
+        const button = event.target.closest("[data-swap]");
+        if (!button) return;
+        const slot = button.dataset.swap;
+        const current = state.recommendations[slot];
+        if (!current) return;
+        await swapMeal(slot, current.meal.id);
+      });
+
+      function payload() {
+        return {
+          preferred_cuisines: splitInput("preferred-cuisines"),
+          flavor_preferences: splitInput("flavor-preferences"),
+          avoid_ingredients: splitInput("avoid-ingredients"),
+          health_goal: valueOf("health-goal"),
+          budget: valueOf("budget"),
+          dining_mode: valueOf("dining-mode"),
+          prefer_quick: document.querySelector("#prefer-quick").checked,
+        };
+      }
+
+      function splitInput(id) {
+        return document
+          .querySelector(`#${id}`)
+          .value.split(/[,，]/)
+          .map((item) => item.trim())
+          .filter(Boolean);
+      }
+
+      function valueOf(id) {
+        return document.querySelector(`#${id}`).value;
+      }
+
+      async function recommendDay() {
+        setBusy(true);
+        hideError();
+        try {
+          const data = await postJson("/v1/meals/recommend-day", {
+            ...payload(),
+            seed: state.seed,
+          });
+          state.recommendations = data.recommendations;
+          render();
+        } catch (error) {
+          showError(error.message);
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function swapMeal(slot, currentMealId) {
+        hideError();
+        try {
+          const data = await postJson("/v1/meals/swap", {
+            ...payload(),
+            slot,
+            current_meal_id: currentMealId,
+            seed: Date.now(),
+          });
+          state.recommendations[slot] = data.recommendation;
+          render();
+        } catch (error) {
+          showError(error.message);
+        }
+      }
+
+      async function postJson(url, body) {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!response.ok) {
+          const detail = await response.json().catch(() => ({}));
+          throw new Error(detail.detail || `请求失败：${response.status}`);
+        }
+        return response.json();
+      }
+
+      function render() {
+        const entries = ["breakfast", "lunch", "dinner"]
+          .map((slot) => [slot, state.recommendations[slot]])
+          .filter(([, recommendation]) => Boolean(recommendation));
+
+        results.innerHTML = entries.map(([slot, recommendation]) => cardTemplate(slot, recommendation)).join("");
+      }
+
+      function cardTemplate(slot, recommendation) {
+        const meal = recommendation.meal;
+        const tags = [
+          meal.cuisine,
+          budgetLabels[meal.budget] || meal.budget,
+          `${meal.prep_minutes} 分钟`,
+          ...meal.health_tags.map((tag) => healthLabels[tag] || tag),
+          ...meal.flavor_tags.slice(0, 2),
+        ];
+        return `
+          <article class="meal-card">
+            <div class="slot">${slotLabels[slot]}</div>
+            <h3>${escapeHtml(meal.name)}</h3>
+            <p class="reason">${escapeHtml(recommendation.reason)}</p>
+            <div class="tags">
+              ${tags.map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join("")}
+            </div>
+            <button class="secondary" type="button" data-swap="${slot}">换一个${slotLabels[slot]}</button>
+          </article>
+        `;
+      }
+
+      function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, (char) => {
+          return {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#039;",
+          }[char];
+        });
+      }
+
+      function setBusy(isBusy) {
+        recommendButton.disabled = isBusy;
+        recommendButton.textContent = isBusy ? "生成中..." : "生成今日三餐";
+      }
+
+      function showError(message) {
+        errorBox.textContent = message;
+        errorBox.style.display = "block";
+      }
+
+      function hideError() {
+        errorBox.textContent = "";
+        errorBox.style.display = "none";
+      }
+    </script>
+  </body>
+</html>

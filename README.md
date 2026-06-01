@@ -18,6 +18,41 @@ uvicorn ai_intelligence.app:app --reload --app-dir src
 
 未配置 API Key 时，内核使用本地 echo 模式，便于联调结构与工具链。
 
+## 一日三餐选择助手
+
+本仓库也包含一个轻量 Web MVP，用来根据口味、忌口、健康目标、预算和用餐方式推荐今日早餐、午餐、晚餐。
+
+启动后端：
+
+```bash
+uvicorn ai_intelligence.app:app --reload --app-dir src
+```
+
+打开页面：
+
+```text
+http://127.0.0.1:8000/meal-picker/
+```
+
+可直接调用 API：
+
+- `POST http://127.0.0.1:8000/v1/meals/recommend-day`：生成今日三餐。
+- `POST http://127.0.0.1:8000/v1/meals/swap`：替换某一餐。
+
+示例请求：
+
+```json
+{
+  "preferred_cuisines": ["中式", "轻食"],
+  "flavor_preferences": ["清爽", "省事"],
+  "avoid_ingredients": ["海鲜"],
+  "health_goal": "balanced",
+  "budget": "medium",
+  "dining_mode": "any",
+  "prefer_quick": true
+}
+```
+
 ## 结构
 
 - `src/ai_intelligence/kernel.py` — `IntelligenceKernel` 编排
@@ -25,6 +60,8 @@ uvicorn ai_intelligence.app:app --reload --app-dir src
 - `src/ai_intelligence/tools/` — 工具注册与执行
 - `src/ai_intelligence/providers/` — LLM 调用
 - `src/ai_intelligence/app.py` — FastAPI 应用
+- `src/ai_intelligence/domain/meals.py` — 三餐推荐规则与内置候选库
+- `apps/meal-picker/` — 一日三餐选择助手静态页
 
 ## 贪吃蛇（静态页）
 
